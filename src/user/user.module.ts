@@ -1,10 +1,11 @@
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Module } from '@nestjs/common';
-import { UserService } from './user.service';
-import { UserController } from './user.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './user.schema';
 import * as bcryptjs from 'bcryptjs';
+
+import { UserController } from './user.controller';
+import { User, UserSchema } from './user.schema';
+import { UserService } from './user.service';
 
 @Module({
   imports: [

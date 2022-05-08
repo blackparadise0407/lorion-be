@@ -25,6 +25,12 @@ export class User {
   @Prop()
   @Exclude({ toPlainOnly: true })
   password: string;
+
+  @Prop({ default: true })
+  enabled: boolean;
+
+  @Prop({ default: false })
+  verified: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -6,6 +6,13 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 
+import {
+  BAD_REQUEST,
+  FORBIDDEN,
+  INTERNAL_SERVER_ERROR,
+  UNAUTHORIZED,
+} from '@/constants/exception.constant';
+
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(error: any, host: ArgumentsHost) {
@@ -16,16 +23,36 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (error.getStatus() === HttpStatus.UNAUTHORIZED) {
       if (typeof error.response !== 'string') {
         error.response.message =
-          error.response.message ||
-          'Full authentication is required to access this resource';
+          error.response.message === 'Unauthorized'
+            ? UNAUTHORIZED
+            : error.response.message;
       }
     }
 
     if (error.getStatus() === HttpStatus.FORBIDDEN) {
       if (typeof error.response !== 'string') {
         error.response.message =
-          error.response.message ||
-          'You do not have permission to access this resource';
+          error.response.message === 'Forbidden'
+            ? FORBIDDEN
+            : error.response.message;
+      }
+    }
+
+    if (error.getStatus() === HttpStatus.BAD_REQUEST) {
+      if (typeof error.response !== 'string') {
+        error.response.message =
+          error.response.message === 'Bad Request'
+            ? BAD_REQUEST
+            : error.response.message;
+      }
+    }
+
+    if (error.getStatus() === HttpStatus.INTERNAL_SERVER_ERROR) {
+      if (typeof error.response !== 'string') {
+        error.response.message =
+          error.response.message === 'Internal Server Error'
+            ? INTERNAL_SERVER_ERROR
+            : error.response.message;
       }
     }
 

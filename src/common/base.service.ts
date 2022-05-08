@@ -1,6 +1,8 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { Document, FilterQuery, Model } from 'mongoose';
 
+type QueryCondition<T> = Partial<Record<keyof T, unknown>> & { _id?: any };
+
 export abstract class BaseService<T, TDoc = T & Document> {
   private readonly _logger: Logger;
   private readonly _model: Model<TDoc>;
@@ -15,7 +17,7 @@ export abstract class BaseService<T, TDoc = T & Document> {
   }
 
   public async getOne(
-    conditions: Partial<Record<keyof T, unknown>> = {},
+    conditions: QueryCondition<T> = {},
     projection: string | Record<string, unknown> = {},
     options: Record<string, unknown> = {},
   ): Promise<TDoc> {
@@ -40,14 +42,39 @@ export abstract class BaseService<T, TDoc = T & Document> {
     }
   }
 
-  public async deleteOne(
-    conditions: Partial<Record<keyof T, unknown>> = {},
-  ): Promise<boolean> {
+  public async updateOne(
+    conditions: QueryCondition<T> = {},
+    payload: DeepPartial<T>,
+  ): Promise<TDoc> {
+    try {
+      return this._model.findOneAndUpdate(
+        conditions as FilterQuery<T>,
+        {
+          $set: payload,
+        },
+        { new: true },
+      );
+    } catch (e: any) {
+      this._logger.error(e.message);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  public async deleteOne(conditions: QueryCondition<T> = {}): Promise<boolean> {
     try {
       const { deletedCount } = await this._model.deleteOne(
         conditions as FilterQuery<T>,
       );
       return deletedCount > 0;
+    } catch (e: any) {
+      this._logger.error(e.message);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  public async deleteMany(conditions: QueryCondition<T> = {}): Promise<void> {
+    try {
+      await this._model.deleteMany(conditions as FilterQuery<T>);
     } catch (e: any) {
       this._logger.error(e.message);
       throw new InternalServerErrorException();

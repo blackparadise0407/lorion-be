@@ -24,11 +24,14 @@ export class Token {
   @Prop()
   expiredAt: Date;
 
-  @Prop({ ref: 'User', type: MSchema.Types.ObjectId })
-  user: User;
-
   @Prop()
   type: TokenType;
+
+  @Prop()
+  userAgent: string;
+
+  @Prop({ ref: 'User', type: MSchema.Types.ObjectId })
+  user: User;
 }
 
 export const TokenSchema = SchemaFactory.createForClass(Token);

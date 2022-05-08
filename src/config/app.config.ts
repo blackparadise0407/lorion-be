@@ -10,8 +10,21 @@ export default () => ({
   auth: {
     jwt: {
       secret: process.env.JWT_SECRET || 'not_so_secret',
+      alg: 'HS512',
+      expiration: 1 * 60 * 60, // 1 hour
     },
     salt_rounds: 10,
     email_verification_expiration: 24 * 60 * 60, // 24 hours
+    refresh_token_expiration: 30 * 24 * 60 * 60, // 1 month
+  },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+  },
+  db: {
+    uri: 'mongodb://localhost:27017/lorion',
+  },
+  queue: {
+    email: 'email',
   },
 });

@@ -1,16 +1,31 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as moment from 'moment';
 
+import { User } from '@/common/decorators/user.decorator';
+import { ResponseTransformInterceptor } from '@/common/interceptors/response-transform.interceptor';
 import { MailService } from '@/mail/mail.service';
 import { TokenType } from '@/token/token-type.enum';
 import { TokenService } from '@/token/token.service';
 import { UserService } from '@/user/user.service';
 
 import { AuthService } from './auth.service';
+import { LoginDTO } from './dto/login.dto';
 import { RegisterDTO } from './dto/register.dto';
+import { JwtAuthGuard } from './guards/auth.guard';
 
 @Controller('auth')
+@UseInterceptors(ResponseTransformInterceptor)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -20,17 +35,24 @@ export class AuthController {
     private readonly mailService: MailService,
   ) {}
 
-  @Post('/register')
+  @Post('register')
   public async register(@Body() body: RegisterDTO) {
-    const { email, username } = body;
-    const foundUsername = await this.userService.getOne({ username });
-    if (foundUsername) {
+    const { email, username, password, confirmPassword } = body;
+
+    const foundUser = await this.userService.model.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (email === foundUser?.email) {
+      throw new BadRequestException('This email has been taken');
+    }
+
+    if (username === foundUser?.username) {
       throw new BadRequestException('This username has been taken');
     }
 
-    const foundEmail = await this.userService.getOne({ email });
-    if (foundEmail) {
-      throw new BadRequestException('This email has been taken');
+    if (password !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
     }
 
     const createdUser = await this.userService.createOne(body);
@@ -47,11 +69,98 @@ export class AuthController {
         .toDate(),
     });
 
-    await this.mailService.sendEmailVerification(
+    this.mailService.enqueueSendVerificationEmail(
       createdUser,
       verificationToken.value,
     );
 
     return createdUser;
+  }
+
+  @Get('verify')
+  public async verifyEmail(@Query('token') token: string) {
+    const foundToken = await this.tokenService.getOne({ value: token });
+
+    const malformedTokenMsg =
+      'The provided token is malformed or otherwise invalid';
+
+    if (!foundToken) {
+      throw new BadRequestException(malformedTokenMsg);
+    }
+
+    if (foundToken.expiredAt < new Date()) {
+      throw new BadRequestException('The provided token has expired');
+    }
+
+    const foundUser = await this.userService.updateOne(
+      { _id: foundToken.user },
+      { verified: true },
+    );
+    if (!foundUser) {
+      throw new BadRequestException(malformedTokenMsg);
+    }
+
+    await this.tokenService.deleteOne({ _id: foundToken.id });
+
+    return 'Verify email successfully';
+  }
+
+  @Post('login')
+  public async login(@Body() body: LoginDTO) {
+    const { username, password } = body;
+    const foundUser = await this.userService.findOneByUsernameOrEmail(username);
+
+    if (!foundUser) {
+      throw new BadRequestException('Invalid credentials');
+    }
+
+    const isPasswordMatch = await this.authService.compareHash(
+      password,
+      foundUser.password,
+    );
+
+    if (!isPasswordMatch) {
+      throw new BadRequestException('Invalid credentials');
+    }
+
+    if (!foundUser.verified) {
+      throw new BadRequestException('Your account is not verified');
+    }
+
+    const accessToken = this.tokenService.generateJwt(foundUser);
+    const refreshToken = await this.tokenService.createOne({
+      expiredAt: this.configService.get<number>(
+        'auth.refresh_token_expiration',
+      ),
+      type: TokenType.token_refresh,
+      user: foundUser,
+      value: this.tokenService.generateRandomHash(32),
+    });
+
+    return {
+      accessToken,
+      refreshToken: refreshToken.value,
+      user: foundUser,
+    };
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@User('sub') userId: string) {
+    await this.tokenService.deleteMany({
+      user: userId,
+      type: TokenType.token_refresh,
+    });
+    return 'Logout successfully';
+  }
+
+  @Delete('revoke')
+  @UseGuards(JwtAuthGuard)
+  async revoke(@User('sub') userId: string) {
+    await this.tokenService.deleteMany({
+      user: userId,
+      type: TokenType.token_refresh,
+    });
+    return 'Revoke user access successfully';
   }
 }

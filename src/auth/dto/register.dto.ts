@@ -19,4 +19,7 @@ export class RegisterDTO {
     },
   )
   readonly password: string;
+
+  @IsDefined()
+  readonly confirmPassword: string;
 }
