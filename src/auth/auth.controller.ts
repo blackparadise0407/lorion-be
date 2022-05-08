@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Delete,
   Get,
   Post,
   Query,
@@ -144,7 +143,7 @@ export class AuthController {
     };
   }
 
-  @Post('logout')
+  @Get('logout')
   @UseGuards(JwtAuthGuard)
   async logout(@User('sub') userId: string) {
     await this.tokenService.deleteMany({
@@ -154,7 +153,8 @@ export class AuthController {
     return 'Logout successfully';
   }
 
-  @Delete('revoke')
+  // TODO: Implement multiple devices login
+  @Get('revoke')
   @UseGuards(JwtAuthGuard)
   async revoke(@User('sub') userId: string) {
     await this.tokenService.deleteMany({

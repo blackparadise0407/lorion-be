@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AppService } from '@/app.service';
 import { AuthModule } from '@/auth/auth.module';
@@ -11,6 +12,7 @@ import { TokenModule } from '@/token/token.module';
 import { UserModule } from '@/user/user.module';
 
 import { HttpLoggerMiddleware } from './common/middlewares/http-logger.middleware';
+import { TasksService } from './common/services/tasks.service';
 
 @Module({
   imports: [
@@ -38,12 +40,13 @@ import { HttpLoggerMiddleware } from './common/middlewares/http-logger.middlewar
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserModule,
     TokenModule,
     MailModule,
   ],
-  providers: [AppService],
+  providers: [AppService, TasksService],
 })
 export class AppModule {
   public static port: number;
