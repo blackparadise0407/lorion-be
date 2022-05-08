@@ -7,7 +7,8 @@ import {
 import { map, Observable } from 'rxjs';
 
 export interface Response<T> {
-  data: T;
+  data?: T;
+  message?: string;
 }
 
 @Injectable()
@@ -18,6 +19,11 @@ export class ResponseTransformInterceptor<T>
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<Response<T>> {
-    return next.handle().pipe(map((data) => ({ data })));
+    return next.handle().pipe(
+      map((data) => {
+        if (typeof data === 'string') return { message: data };
+        return data;
+      }),
+    );
   }
 }

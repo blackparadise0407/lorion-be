@@ -73,7 +73,7 @@ export class AuthController {
       verificationToken.value,
     );
 
-    return createdUser;
+    return 'Register successfully';
   }
 
   @Get('verify')
