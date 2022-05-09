@@ -33,7 +33,7 @@ export class TokenService extends BaseService<Token> {
     }
   }
 
-  public generateJwt(user: User & { _id: any }): string {
+  public generateJwt(user: User & { _id?: any }): string {
     const payload: Payload = {
       sub: user._id,
       email: user.email,
@@ -44,14 +44,15 @@ export class TokenService extends BaseService<Token> {
     });
   }
 
-  public validateJwt(token: string): Payload {
+  public validateJwt(token: string, ignoreExpiration = false): Payload {
     try {
       return verify(token, this.configService.get<string>('auth.jwt.secret'), {
         algorithms: [this.configService.get<Algorithm>('auth.jwt.alg')],
+        ignoreExpiration,
       }) as Payload;
     } catch (e) {
       if (e.message === 'jwt expired') {
-        throw new ForbiddenException('Token expired');
+        throw new ForbiddenException(e.message);
       }
       throw new ForbiddenException('Invalid token');
     }

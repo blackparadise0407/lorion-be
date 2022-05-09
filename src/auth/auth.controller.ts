@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Post,
   Query,
   UseGuards,
@@ -21,6 +22,7 @@ import { UserService } from '@/user/user.service';
 import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
 import { RegisterDTO } from './dto/register.dto';
+import { TokenRequestDTO } from './dto/token-request.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 
 @Controller('auth')
@@ -128,8 +130,9 @@ export class AuthController {
 
     const accessToken = this.tokenService.generateJwt(foundUser);
     const refreshToken = await this.tokenService.createOne({
-      expiredAt: this.configService.get<number>(
-        'auth.refresh_token_expiration',
+      expiredAt: moment().add(
+        this.configService.get<number>('auth.refresh_token_expiration'),
+        'seconds',
       ),
       type: TokenType.token_refresh,
       user: foundUser,
@@ -141,6 +144,40 @@ export class AuthController {
       refreshToken: refreshToken.value,
       user: foundUser,
     };
+  }
+
+  @Post('token')
+  async token(
+    @Headers('authorization') authorization: string,
+    @Body() { refreshToken }: TokenRequestDTO,
+  ) {
+    const token = authorization.split(' ')[1];
+    const { sub } = this.tokenService.validateJwt(token, true);
+
+    const malformedTokenMsg =
+      'The provided token is malformed or otherwise invalid';
+
+    const foundToken = await this.tokenService.getOne({
+      user: sub,
+      value: refreshToken,
+    });
+
+    if (!foundToken) {
+      throw new BadRequestException(malformedTokenMsg);
+    }
+
+    if (foundToken.expiredAt < new Date()) {
+      throw new BadRequestException('Session expired');
+    }
+    const foundUser = await this.userService.getOne({ _id: sub });
+
+    if (!foundUser) {
+      throw new BadRequestException(malformedTokenMsg);
+    }
+
+    const accessToken = this.tokenService.generateJwt(foundUser);
+
+    return { accessToken };
   }
 
   @Get('logout')
