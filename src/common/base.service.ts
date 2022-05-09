@@ -1,5 +1,5 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
-import { Document, FilterQuery, Model } from 'mongoose';
+import { Document, FilterQuery, Model, QueryOptions } from 'mongoose';
 
 type QueryCondition<T> = Partial<Record<keyof T, unknown>> & { _id?: any };
 
@@ -19,7 +19,7 @@ export abstract class BaseService<T, TDoc = T & Document> {
   public async getOne(
     conditions: QueryCondition<T> = {},
     projection: string | Record<string, unknown> = {},
-    options: Record<string, unknown> = {},
+    options: QueryOptions<T> = {},
   ): Promise<TDoc> {
     try {
       return this._model.findOne(

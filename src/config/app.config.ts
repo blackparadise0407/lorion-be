@@ -6,6 +6,7 @@ export default () => ({
       password: process.env.MAIL_PASSWORD,
     },
     baseUrl: process.env.BASE_URL || 'http://localhost:5000', // Match default port
+    clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
   },
   auth: {
     jwt: {

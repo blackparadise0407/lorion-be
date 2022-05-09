@@ -11,6 +11,7 @@ import {
   FORBIDDEN,
   INTERNAL_SERVER_ERROR,
   UNAUTHORIZED,
+  TOO_MANY_REQUESTS,
 } from '@/constants/exception.constant';
 
 @Catch(HttpException)
@@ -19,6 +20,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const req = ctx.getRequest();
     const res = ctx.getResponse();
+
+    if (error.getStatus() === HttpStatus.TOO_MANY_REQUESTS) {
+      if (typeof error.response === 'string') {
+        error.response = TOO_MANY_REQUESTS;
+      }
+    }
 
     if (error.getStatus() === HttpStatus.UNAUTHORIZED) {
       if (typeof error.response !== 'string') {
