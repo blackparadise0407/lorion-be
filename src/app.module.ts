@@ -3,6 +3,7 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppService } from '@/app.service';
 import { AuthModule } from '@/auth/auth.module';
@@ -39,6 +40,10 @@ import { TasksService } from './common/services/tasks.service';
         },
       }),
       inject: [ConfigService],
+    }),
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
     }),
     ScheduleModule.forRoot(),
     AuthModule,

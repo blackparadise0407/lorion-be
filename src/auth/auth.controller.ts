@@ -10,6 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import * as moment from 'moment';
 
 import { User } from '@/common/decorators/user.decorator';
@@ -22,6 +23,7 @@ import { UserService } from '@/user/user.service';
 import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
 import { RegisterDTO } from './dto/register.dto';
+import { ResendVerificationEmailDTO } from './dto/resend-verfication-email.dto';
 import { TokenRequestDTO } from './dto/token-request.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 
@@ -78,14 +80,59 @@ export class AuthController {
     return 'Register successfully';
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 1 * 60 * 60)
+  @Post('resend-verification')
+  async resendVerificationEmail(
+    @Body() { username }: ResendVerificationEmailDTO,
+  ) {
+    const foundUser = await this.userService.getOne({ username });
+    if (!foundUser) {
+      throw new BadRequestException('User does not exist');
+    }
+
+    const verificationToken = await this.tokenService.createOne({
+      value: this.tokenService.generateRandomHash(),
+      user: foundUser,
+      type: TokenType.email_verify,
+      expiredAt: moment()
+        .add(
+          this.configService.get<number>('auth.email_verification_expiration'),
+          'seconds',
+        )
+        .toDate(),
+    });
+
+    this.mailService.enqueueSendVerificationEmail(
+      foundUser,
+      verificationToken.value,
+    );
+
+    return 'Resend verification link successfully';
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 1 * 60 * 60)
   @Get('verify')
-  public async verifyEmail(@Query('token') token: string) {
-    const foundToken = await this.tokenService.getOne({ value: token });
+  public async verifyEmail(
+    @Query() { token, username }: { token: string; username: string },
+  ) {
+    const foundToken = await this.tokenService.getOne(
+      { value: token },
+      {},
+      {
+        populate: 'user',
+      },
+    );
 
     const malformedTokenMsg =
       'The provided token is malformed or otherwise invalid';
 
     if (!foundToken) {
+      throw new BadRequestException(malformedTokenMsg);
+    }
+
+    if (!username || username !== foundToken.user.username) {
       throw new BadRequestException(malformedTokenMsg);
     }
 
