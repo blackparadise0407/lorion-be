@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -54,7 +55,7 @@ export class TokenService extends BaseService<Token> {
       if (e.message === 'jwt expired') {
         throw new ForbiddenException(e.message);
       }
-      throw new ForbiddenException('Invalid token');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }

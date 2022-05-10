@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '@/auth/guards/auth.guard';
+import { User } from '@/common/decorators/user.decorator';
 
 import { UserService } from './user.service';
 
@@ -10,7 +11,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  async get() {
-    return 'ok';
+  async getCurrentUser(@User('sub') userId: string) {
+    return await this.userService.getOne({ _id: userId });
   }
 }

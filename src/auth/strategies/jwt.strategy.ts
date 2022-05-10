@@ -25,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       headers: { authorization },
     } = req;
 
-    const token = authorization.split(' ')[1];
+    const token = authorization?.split(' ')[1];
     return this.tokenService.validateJwt(token);
   }
 }

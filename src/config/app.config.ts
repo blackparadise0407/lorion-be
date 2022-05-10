@@ -12,7 +12,7 @@ export default () => ({
     jwt: {
       secret: process.env.JWT_SECRET || 'not_so_secret',
       alg: 'HS512',
-      expiration: 1, // 1 hour
+      expiration: 1 * 60 * 60, // 1 hour
     },
     salt_rounds: 10,
     email_verification_expiration: 24 * 60 * 60, // 24 hours
