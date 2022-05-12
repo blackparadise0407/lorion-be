@@ -12,8 +12,10 @@ import { MailModule } from '@/mail/mail.module';
 import { TokenModule } from '@/token/token.module';
 import { UserModule } from '@/user/user.module';
 
+import { AppGateway } from './app.gateway';
 import { HttpLoggerMiddleware } from './common/middlewares/http-logger.middleware';
 import { TasksService } from './common/services/tasks.service';
+import { ConversationModule } from './conversation/conversation.module';
 
 @Module({
   imports: [
@@ -50,8 +52,9 @@ import { TasksService } from './common/services/tasks.service';
     UserModule,
     TokenModule,
     MailModule,
+    ConversationModule,
   ],
-  providers: [AppService, TasksService],
+  providers: [AppService, AppGateway, TasksService],
 })
 export class AppModule {
   public static port: number;
