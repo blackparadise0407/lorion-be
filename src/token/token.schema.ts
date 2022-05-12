@@ -18,6 +18,9 @@ export type TokenDocument = Token & Document;
   },
 })
 export class Token {
+  _id: MSchema.Types.ObjectId;
+  id?: string;
+
   @Prop()
   value: string;
 
@@ -32,6 +35,8 @@ export class Token {
 
   @Prop({ ref: 'User', type: MSchema.Types.ObjectId })
   user: User;
+
+  createdAt: Date;
 }
 
 export const TokenSchema = SchemaFactory.createForClass(Token);

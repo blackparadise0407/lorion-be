@@ -16,6 +16,7 @@ import { AppGateway } from './app.gateway';
 import { HttpLoggerMiddleware } from './common/middlewares/http-logger.middleware';
 import { TasksService } from './common/services/tasks.service';
 import { ConversationModule } from './conversation/conversation.module';
+import { AttachmentModule } from './attachment/attachment.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ConversationModule } from './conversation/conversation.module';
     TokenModule,
     MailModule,
     ConversationModule,
+    AttachmentModule,
   ],
   providers: [AppService, AppGateway, TasksService],
 })
