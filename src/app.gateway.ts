@@ -63,4 +63,9 @@ export class AppGateway
     }
     return null;
   }
+
+  @SubscribeMessage('join')
+  handleJoinRoom(client: Socket, roomId: string): void {
+    client.join(roomId);
+  }
 }
