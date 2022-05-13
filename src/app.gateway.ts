@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 
+import { MessagePayloadDTO } from './dto/message-payload.dto';
 import { Payload } from './token/jwt.payload';
 import { TokenService } from './token/token.service';
 import { UserService } from './user/user.service';
@@ -51,9 +52,8 @@ export class AppGateway
   }
 
   @SubscribeMessage('message')
-  handleMessage(client: Socket, payload: string): void {
-    console.log(payload);
-    this.server.emit('message', payload);
+  handleMessage(client: Socket, payload: MessagePayloadDTO): void {
+    this.server.to(payload.conversationId).emit('message', payload);
   }
 
   private getPayloadFromClient(client: Socket) {

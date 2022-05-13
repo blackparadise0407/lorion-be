@@ -27,6 +27,9 @@ export class Message {
   @Prop({ type: MSchema.Types.ObjectId, ref: 'Conversation' })
   conversation: Conversation;
 
+  @Prop()
+  timestamp: number;
+
   createdAt: Date;
 }
 

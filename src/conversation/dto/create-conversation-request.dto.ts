@@ -6,6 +6,5 @@ export class CreateConversationRequestDTO {
   @IsString({ each: true })
   users: Array<string>;
 
-  @IsDefined()
   name: string;
 }
