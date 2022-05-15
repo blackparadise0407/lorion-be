@@ -25,7 +25,12 @@ export class MailService {
 
   public async sendVerificationEmail(user: User, token: string) {
     const clientUrl = this.configService.get<string>('app.clientUrl');
-    const url = `${clientUrl}/verify?token=${token}&username=${user.username}`;
+    const queryString = new URLSearchParams({
+      token,
+      username: user.username,
+    }).toString();
+
+    const constructedUrl = `${clientUrl}/verify?${queryString}`;
 
     await this.mailerService.sendMail({
       to: user.email,
@@ -33,7 +38,7 @@ export class MailService {
       template: 'email-verification',
       context: {
         name: user.username,
-        url,
+        url: constructedUrl,
       },
     });
   }

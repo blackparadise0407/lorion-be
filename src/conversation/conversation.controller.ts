@@ -18,6 +18,7 @@ import { UserService } from '@/user/user.service';
 
 import { ConversationService } from './conversation.service';
 import { CreateConversationRequestDTO } from './dto/create-conversation-request.dto';
+import { MessageService } from './message/message.service';
 
 @Controller('conversation')
 @UseInterceptors(ResponseTransformInterceptor)
@@ -25,9 +26,27 @@ import { CreateConversationRequestDTO } from './dto/create-conversation-request.
 export class ConversationController {
   constructor(
     private readonly conversationService: ConversationService,
-
+    private readonly messageService: MessageService,
     private readonly userService: UserService,
   ) {}
+
+  @Get('/messages/:conversationId')
+  public async getMessagesByConversationId(
+    @Param('conversationId')
+    conversationId: string,
+  ) {
+    if (!conversationId)
+      throw new BadRequestException('Conversation id is required');
+    if (!isValidObjectId(conversationId))
+      throw new BadRequestException('Conversation id is invalid');
+
+    const messages = await this.messageService.model
+      .find({
+        conversation: conversationId,
+      })
+      .sort({ timestamp: 1 });
+    return messages;
+  }
 
   @Get(':userId')
   public async getByUser(@Param('userId') userId: string) {

@@ -67,5 +67,12 @@ export class AppGateway
   @SubscribeMessage('join')
   handleJoinRoom(client: Socket, roomId: string): void {
     client.join(roomId);
+    this.logger.log(`Client ${client.id} JOIN room ${roomId}`);
+  }
+
+  @SubscribeMessage('leave')
+  handleLeaveRoom(client: Socket, roomId: string): void {
+    client.leave(roomId);
+    this.logger.log(`Client ${client.id} LEAVE room ${roomId}`);
   }
 }

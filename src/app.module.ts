@@ -1,9 +1,10 @@
 import { BullModule } from '@nestjs/bull';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import * as redisStore from 'cache-manager-redis-store';
 
 import { AppService } from '@/app.service';
 import { AuthModule } from '@/auth/auth.module';
@@ -13,10 +14,10 @@ import { TokenModule } from '@/token/token.module';
 import { UserModule } from '@/user/user.module';
 
 import { AppGateway } from './app.gateway';
+import { AttachmentModule } from './attachment/attachment.module';
 import { HttpLoggerMiddleware } from './common/middlewares/http-logger.middleware';
 import { TasksService } from './common/services/tasks.service';
 import { ConversationModule } from './conversation/conversation.module';
-import { AttachmentModule } from './attachment/attachment.module';
 
 @Module({
   imports: [
@@ -49,6 +50,17 @@ import { AttachmentModule } from './attachment/attachment.module';
       limit: 10,
     }),
     ScheduleModule.forRoot(),
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        store: redisStore,
+        socket: {
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     AuthModule,
     UserModule,
     TokenModule,
