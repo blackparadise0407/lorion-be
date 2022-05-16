@@ -1,7 +1,7 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { Document, FilterQuery, Model, QueryOptions } from 'mongoose';
 
-type QueryCondition<T> = Partial<Record<keyof T, unknown>> & { _id?: any };
+type QueryCondition<T> = Partial<Record<keyof T, unknown>>;
 
 export abstract class BaseService<T, TDoc = T & Document> {
   private readonly _logger: Logger;

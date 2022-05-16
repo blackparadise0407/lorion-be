@@ -1,4 +1,5 @@
-import { Logger } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -7,6 +8,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Cache } from 'cache-manager';
 import { Socket, Server } from 'socket.io';
 
 import { MessagePayloadDTO } from './dto/message-payload.dto';
@@ -25,6 +27,8 @@ export class AppGateway
   constructor(
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
+    private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
   @WebSocketServer() private readonly server: Server;
   private logger = new Logger('AppGateway');
@@ -52,7 +56,26 @@ export class AppGateway
   }
 
   @SubscribeMessage('message')
-  handleMessage(client: Socket, payload: MessagePayloadDTO): void {
+  async handleMessage(
+    client: Socket,
+    payload: MessagePayloadDTO,
+  ): Promise<void> {
+    const { conversationId } = payload;
+    const cachedConversation = await this.cacheManager.get(
+      `conversation:${conversationId}`,
+    );
+    const conversation: Array<MessagePayloadDTO> = cachedConversation
+      ? JSON.parse(cachedConversation as string)
+      : [];
+    conversation.push(payload);
+    await this.cacheManager.set(
+      `conversation:${conversationId}`,
+      JSON.stringify(conversation),
+      {
+        ttl: this.configService.get<number>('redis.message_ttl'),
+      },
+    );
+
     this.server.to(payload.conversationId).emit('message', payload);
   }
 

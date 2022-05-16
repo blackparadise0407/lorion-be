@@ -21,6 +21,7 @@ export default () => ({
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    message_ttl: 1 * 60 * 60 + 5 * 60, // 1 hour + 5 minutes
   },
   db: {
     uri: process.env.DB_URI || 'mongodb://localhost:27017/lorion',

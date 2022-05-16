@@ -59,6 +59,7 @@ import { ConversationModule } from './conversation/conversation.module';
           port: configService.get<number>('redis.port'),
         },
       }),
+      isGlobal: true,
       inject: [ConfigService],
     }),
     AuthModule,

@@ -10,6 +10,10 @@ export type MessageDocument = Message & Document;
 @Schema({
   versionKey: false,
   timestamps: { createdAt: true },
+  toJSON: {
+    virtuals: true,
+    transform: true,
+  },
 })
 export class Message {
   _id: MSchema.Types.ObjectId;
@@ -17,9 +21,6 @@ export class Message {
 
   @Prop({ type: MSchema.Types.ObjectId, ref: 'User' })
   sender: User;
-
-  @Prop({ type: MSchema.Types.ObjectId, ref: 'User' })
-  receiver: User;
 
   @Prop()
   content: string;

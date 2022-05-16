@@ -14,6 +14,7 @@ import { isValidObjectId } from 'mongoose';
 import { JwtAuthGuard } from '@/auth/guards/auth.guard';
 import { User } from '@/common/decorators/user.decorator';
 import { ResponseTransformInterceptor } from '@/common/interceptors/response-transform.interceptor';
+import { MessagePayloadDTO } from '@/dto/message-payload.dto';
 import { UserService } from '@/user/user.service';
 
 import { ConversationService } from './conversation.service';
@@ -40,11 +41,30 @@ export class ConversationController {
     if (!isValidObjectId(conversationId))
       throw new BadRequestException('Conversation id is invalid');
 
-    const messages = await this.messageService.model
-      .find({
-        conversation: conversationId,
-      })
-      .sort({ timestamp: 1 });
+    const LIMIT = 20;
+
+    let messages: Array<MessagePayloadDTO> = [];
+
+    const messagesFromCache =
+      await this.conversationService.getMessagesByConversationIdFromCache(
+        conversationId,
+      );
+
+    messages = messagesFromCache;
+
+    if (messagesFromCache.length < 20) {
+      const messagesFromDb = await this.messageService.model
+        .find({
+          conversation: conversationId,
+        })
+        .limit(LIMIT - messagesFromCache.length)
+        .sort({ timestamp: 1 });
+      const mappedMessages = messagesFromDb.map(
+        this.messageService.mapMessageToMessagePayload,
+      );
+      messages = [...mappedMessages, ...messages];
+    }
+
     return messages;
   }
 
