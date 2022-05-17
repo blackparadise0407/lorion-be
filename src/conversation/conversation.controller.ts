@@ -8,8 +8,11 @@ import {
   Post,
   Body,
   NotFoundException,
+  Inject,
+  CACHE_MANAGER,
 } from '@nestjs/common';
-import { isValidObjectId } from 'mongoose';
+import { Cache } from 'cache-manager';
+import { isValidObjectId, PipelineStage, Types } from 'mongoose';
 
 import { JwtAuthGuard } from '@/auth/guards/auth.guard';
 import { User } from '@/common/decorators/user.decorator';
@@ -29,6 +32,7 @@ export class ConversationController {
     private readonly conversationService: ConversationService,
     private readonly messageService: MessageService,
     private readonly userService: UserService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   @Get('/messages/:conversationId')
@@ -73,11 +77,77 @@ export class ConversationController {
     if (!isValidObjectId(userId))
       throw new BadRequestException('User id is invalid');
 
-    return await this.conversationService.model
-      .find({
-        users: { $in: [userId] },
-      })
-      .populate('users');
+    const pipeline: PipelineStage[] = [];
+    const matches: PipelineStage = {
+      $match: {
+        users: { $in: [new Types.ObjectId(userId)] },
+      },
+    };
+
+    pipeline.push(matches);
+
+    const lookups: PipelineStage[] = [
+      {
+        $lookup: {
+          from: 'messages',
+          localField: '_id',
+          foreignField: 'conversation',
+          as: 'lastMessage',
+          pipeline: [{ $sort: { timestamp: -1 } }, { $limit: 1 }],
+        },
+      },
+      { $unwind: { path: '$lastMessage', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'users',
+          foreignField: '_id',
+          as: 'users',
+          pipeline: [
+            {
+              $project: {
+                id: '$_id',
+                username: 1,
+                email: 1,
+              },
+            },
+          ],
+        },
+      },
+      { $sort: { 'lastMessage.timestamp': -1 } },
+      { $limit: 20 },
+      { $skip: 0 },
+      {
+        $addFields: {
+          id: '$_id',
+        },
+      },
+    ];
+
+    pipeline.push(...lookups);
+
+    const conversations = await this.conversationService.model.aggregate(
+      pipeline,
+    );
+
+    for (const c of conversations) {
+      const messages =
+        await this.conversationService.getMessagesByConversationIdFromCache(
+          c.id,
+        );
+      if (c.lastMessage) {
+        c.lastMessage = this.messageService.mapMessageToMessagePayload(
+          c.lastMessage,
+        );
+      }
+      if (messages.length) {
+        c.lastMessage = messages[messages.length - 1];
+      }
+    }
+
+    console.log(conversations);
+
+    return conversations;
   }
 
   @Post('')

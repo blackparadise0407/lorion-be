@@ -18,12 +18,10 @@ export class ConversationService extends BaseService<Conversation> {
     super(conversationModel);
   }
 
-  public async getMessagesByConversationIdFromCache(conversationId: string) {
-    const plainConversation = await this.cacheManager.get(
-      `conversation:${conversationId}`,
-    );
+  public async getMessagesByConversationIdFromCache(id: string) {
+    const rawMessages = await this.cacheManager.get(`conversation:${id}`);
     return (
-      plainConversation ? JSON.parse(plainConversation as string) : []
+      rawMessages ? JSON.parse(rawMessages as string) : []
     ) as Array<MessagePayloadDTO>;
   }
 }
