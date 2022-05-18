@@ -145,8 +145,6 @@ export class ConversationController {
       }
     }
 
-    console.log(conversations);
-
     return conversations;
   }
 

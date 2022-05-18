@@ -12,6 +12,7 @@ import { Cache } from 'cache-manager';
 import { Socket, Server } from 'socket.io';
 
 import { MessagePayloadDTO } from './dto/message-payload.dto';
+import { TypingPayloadDTO } from './dto/typing-payload.dto';
 import { Payload } from './token/jwt.payload';
 import { TokenService } from './token/token.service';
 import { UserService } from './user/user.service';
@@ -55,6 +56,16 @@ export class AppGateway
     this.logger.log('Client disconnected', client.id);
   }
 
+  @SubscribeMessage('typing')
+  async handleTyping(
+    client: Socket,
+    { users, conversationId, typing }: TypingPayloadDTO,
+  ): Promise<void> {
+    users.forEach((u) => {
+      this.server.to(u).emit('typing', { users, conversationId, typing });
+    });
+  }
+
   @SubscribeMessage('message')
   async handleMessage(
     client: Socket,
@@ -76,6 +87,12 @@ export class AppGateway
       },
     );
 
+    const receivers = payload.receivers;
+    if (Array.isArray(receivers)) {
+      receivers.forEach((r) => {
+        this.server.to(r).emit('lastMessage', payload);
+      });
+    }
     this.server.to(payload.conversationId).emit('message', payload);
   }
 
@@ -97,5 +114,17 @@ export class AppGateway
   handleLeaveRoom(client: Socket, roomId: string): void {
     client.leave(roomId);
     this.logger.log(`Client ${client.id} LEAVE room ${roomId}`);
+  }
+
+  @SubscribeMessage('joinUser')
+  handleJoinUser(client: Socket, userId: string): void {
+    client.join(userId);
+    this.logger.log(`Client ${client.id} JOIN USER ${userId}`);
+  }
+
+  @SubscribeMessage('leaveUser')
+  handleLeaveUser(client: Socket, userId: string): void {
+    client.leave(userId);
+    this.logger.log(`Client ${client.id} LEAVE USER ${userId}`);
   }
 }

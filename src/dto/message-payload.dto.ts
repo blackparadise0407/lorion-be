@@ -3,4 +3,5 @@ export class MessagePayloadDTO {
   message: string;
   timestamp: number;
   senderId: string;
+  receivers: Array<string>;
 }
