@@ -17,6 +17,12 @@ export class Attachment {
   @Prop()
   path: string;
 
+  @Prop()
+  size: number;
+
+  @Prop()
+  mimetype: string;
+
   @Prop({ type: MSchema.Types.ObjectId, ref: 'User' })
   user: User;
 
