@@ -24,6 +24,8 @@ import { UserService } from '@/user/user.service';
 import { ConversationService } from './conversation.service';
 import { CreateConversationRequestDTO } from './dto/create-conversation-request.dto';
 import { MessageService } from './message/message.service';
+// TODO: Refactor load more
+const MESSAGE_LIMIT = 20;
 
 @Controller('conversation')
 @UseInterceptors(ResponseTransformInterceptor)
@@ -50,7 +52,7 @@ export class ConversationController {
       throw new BadRequestException('Conversation id is invalid');
 
     const PAGE = page ?? 1;
-    const LIMIT = limit ?? 20;
+    let LIMIT = limit ?? MESSAGE_LIMIT;
     const SKIP = (PAGE - 1) * LIMIT;
 
     let messages: Array<MessagePayloadDTO> = [];
@@ -60,8 +62,29 @@ export class ConversationController {
         conversationId,
       );
 
-    if (current < messagesFromCache.length) {
+    const messagesFromCacheLen = messagesFromCache.length;
+    if (current < messagesFromCacheLen) {
       messages = messagesFromCache;
+      LIMIT = messagesFromCacheLen > LIMIT ? 0 : LIMIT - messagesFromCacheLen;
+    }
+
+    if (
+      messagesFromCacheLen < MESSAGE_LIMIT ||
+      current >= messagesFromCacheLen
+    ) {
+      const messagesFromDb = await this.messageService.model
+        .find({
+          conversation: conversationId,
+        })
+        .limit(LIMIT)
+        .skip(SKIP)
+        .sort({ timestamp: -1 });
+
+      const mappedMessages = messagesFromDb
+        .map(this.messageService.mapMessageToMessagePayload)
+        .reverse();
+
+      messages = [...mappedMessages, ...messages];
     }
 
     const totalFromDb = await this.messageService.model
@@ -69,21 +92,6 @@ export class ConversationController {
         conversation: conversationId,
       })
       .countDocuments();
-
-    if (messagesFromCache.length < LIMIT) {
-      const messagesFromDb = await this.messageService.model
-        .find({
-          conversation: conversationId,
-        })
-        .limit(LIMIT - messagesFromCache.length)
-        .skip(SKIP)
-        .sort({ timestamp: 1 });
-
-      const mappedMessages = messagesFromDb.map(
-        this.messageService.mapMessageToMessagePayload,
-      );
-      messages = [...mappedMessages, ...messages];
-    }
 
     return { messages, total: totalFromDb };
   }
