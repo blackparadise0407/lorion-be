@@ -31,7 +31,7 @@ export class TasksService {
     const keys = (await this.cacheManager.store.keys(
       'conversation:*',
     )) as Array<string>;
-    keys.forEach(async (key) => {
+    for (const key of keys) {
       const rawMessages = await this.cacheManager.get(key);
       const insertedMessages: Array<MessagePayloadDTO> = rawMessages
         ? JSON.parse(rawMessages as string)
@@ -49,6 +49,6 @@ export class TasksService {
         );
         await this.cacheManager.del(key);
       }
-    });
+    }
   }
 }
