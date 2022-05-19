@@ -10,6 +10,7 @@ import {
   NotFoundException,
   Inject,
   CACHE_MANAGER,
+  Query,
 } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { isValidObjectId, PipelineStage, Types } from 'mongoose';
@@ -37,15 +38,19 @@ export class ConversationController {
 
   @Get('/messages/:conversationId')
   public async getMessagesByConversationId(
-    @Param('conversationId')
-    conversationId: string,
+    @Param('conversationId') conversationId: string,
+    @Query('limit') limit: number,
+    @Query('page') page: number,
+    @Query('current') current = 0,
   ) {
     if (!conversationId)
       throw new BadRequestException('Conversation id is required');
     if (!isValidObjectId(conversationId))
       throw new BadRequestException('Conversation id is invalid');
 
-    const LIMIT = 20;
+    const PAGE = page ?? 1;
+    const LIMIT = limit ?? 20;
+    const SKIP = (PAGE - 1) * LIMIT;
 
     let messages: Array<MessagePayloadDTO> = [];
 
@@ -54,22 +59,32 @@ export class ConversationController {
         conversationId,
       );
 
-    messages = messagesFromCache;
+    if (current < messagesFromCache.length) {
+      messages = messagesFromCache;
+    }
 
-    if (messagesFromCache.length < 20) {
+    const totalFromDb = await this.messageService.model
+      .find({
+        conversation: conversationId,
+      })
+      .countDocuments();
+
+    if (messagesFromCache.length < LIMIT) {
       const messagesFromDb = await this.messageService.model
         .find({
           conversation: conversationId,
         })
         .limit(LIMIT - messagesFromCache.length)
+        .skip(SKIP)
         .sort({ timestamp: 1 });
+
       const mappedMessages = messagesFromDb.map(
         this.messageService.mapMessageToMessagePayload,
       );
       messages = [...mappedMessages, ...messages];
     }
 
-    return messages;
+    return { messages, total: totalFromDb };
   }
 
   @Get(':userId')

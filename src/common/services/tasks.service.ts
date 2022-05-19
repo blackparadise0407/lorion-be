@@ -1,10 +1,9 @@
 import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Cache } from 'cache-manager';
 
+import { ConversationService } from '@/conversation/conversation.service';
 import { MessageService } from '@/conversation/message/message.service';
-import { MessagePayloadDTO } from '@/dto/message-payload.dto';
 import { TokenService } from '@/token/token.service';
 
 @Injectable()
@@ -14,7 +13,7 @@ export class TasksService {
   constructor(
     private readonly tokenService: TokenService,
     private readonly messageService: MessageService,
-    private readonly configService: ConfigService,
+    private readonly conversationService: ConversationService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
@@ -32,10 +31,10 @@ export class TasksService {
       'conversation:*',
     )) as Array<string>;
     for (const key of keys) {
-      const rawMessages = await this.cacheManager.get(key);
-      const insertedMessages: Array<MessagePayloadDTO> = rawMessages
-        ? JSON.parse(rawMessages as string)
-        : [];
+      const [, id] = key.split(':');
+      const insertedMessages =
+        await this.conversationService.getMessagesByConversationIdFromCache(id);
+
       if (insertedMessages.length) {
         await this.messageService.model.insertMany(
           insertedMessages.map(
